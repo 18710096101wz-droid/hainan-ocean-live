@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#06131c" />
+  <title>Hainan Ocean Live</title>
+  <link rel="preconnect" href="https://unpkg.com">
+  <link rel="preconnect" href="https://basemaps.cartocdn.com">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <div id="map"></div>
+  <canvas id="fieldCanvas" class="field-canvas"></canvas>
+  <canvas id="currentCanvas" class="current-canvas"></canvas>
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="brandmark"></div>
+      <div><div class="brandtitle">Hainan Ocean Live</div><div class="brandsub">REAL-TIME MARINE MODEL · HAINAN ISLAND</div></div>
+    </div>
+    <div class="topactions">
+      <button class="refresh" id="refreshBtn">↻ Refresh data</button>
+      <div class="livepill"><span class="dot"></span><span id="liveLabel">LIVE MODEL</span></div>
+    </div>
+  </header>
+
+  <aside class="leftpanel">
+    <div class="section">
+      <div class="section-title">Ocean layers</div>
+      <div class="layergrid">
+        <button class="layerbtn active" data-layer="sst"><b>Sea Surface Temp.</b>SST</button>
+        <button class="layerbtn" data-layer="wave"><b>Wave Height</b>Significant</button>
+        <button class="layerbtn" data-layer="current"><b>Ocean Current</b>Velocity</button>
+        <button class="layerbtn" data-layer="period"><b>Wave Period</b>Mean period</button>
+      </div>
+    </div>
+    <div class="section">
+      <div class="toggleline">
+        <div><div style="font-size:12px;font-weight:700">Current particles</div><div class="minor">Direction + relative velocity</div></div>
+        <div class="switch on" id="particleSwitch"></div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-title">Live model nodes</div>
+      <div class="node-list" id="nodeList"></div>
+    </div>
+    <div class="section">
+      <div class="section-title">Data notes</div>
+      <div class="minor">Marine fields are extracted from the Open-Meteo Marine API. SST and ocean currents use ~0.08° numerical-model grids. Coastal accuracy is limited. This prototype is not for navigation.</div>
+      <div class="modelnote" id="modelNote">Waiting for data…</div>
+    </div>
+  </aside>
+
+  <aside class="rightcard">
+    <div class="hero">
+      <div class="hero-kicker"><span id="focusType">REGIONAL FIELD</span><span id="focusCode">HN</span></div>
+      <div class="hero-title" id="focusName">Hainan coastal waters</div>
+      <div class="coords" id="focusCoords">Regional mean</div>
+      <div class="hero-value"><strong id="heroValue">--</strong><span id="heroUnit">°C SST</span></div>
+    </div>
+    <div class="statgrid">
+      <div class="stat"><div class="statlabel">Ocean current</div><div class="statvalue"><span id="currentSpeed">--</span><span class="statunit">km/h</span></div></div>
+      <div class="stat"><div class="statlabel">Current direction</div><div class="statvalue"><span id="currentDirection">--</span><span class="statunit">°</span></div></div>
+      <div class="stat"><div class="statlabel">Wave height</div><div class="statvalue"><span id="waveHeight">--</span><span class="statunit">m</span></div></div>
+      <div class="stat"><div class="statlabel">Wave period</div><div class="statvalue"><span id="wavePeriod">--</span><span class="statunit">s</span></div></div>
+    </div>
+    <button class="series-btn" id="openSeriesBtn">OPEN LIVE TIME SERIES</button>
+  </aside>
+
+  <div class="legend" id="legend">
+    <div style="font-size:9.5px;color:#91aab5" id="legendTitle">Sea surface temperature · °C</div>
+    <div class="legendline"></div>
+    <div class="legendticks"><span id="l0">22</span><span id="l1">25</span><span id="l2">28</span><span id="l3">31</span><span id="l4">34</span></div>
+  </div>
+
+  <div class="timeline">
+    <div class="timehead"><span class="time-title">MAP FORECAST TIMELINE</span><span class="time-value" id="timeValue">NOW</span></div>
+    <input id="timeSlider" type="range" min="0" max="72" value="0" step="1" />
+    <div class="ticks"><span>NOW</span><span>+18h</span><span>+36h</span><span>+54h</span><span>+72h</span></div>
+  </div>
+  <div class="statusbar" id="statusbar"></div>
+
+  <div class="chart-modal" id="chartModal">
+    <div class="chart-shell">
+      <div class="chart-head">
+        <button class="close-btn" id="closeChart">×</button>
+        <div class="chart-title" id="chartTitle">HN-01 · HAIKOU NORTH</div>
+        <div class="chart-sub" id="chartSub">MODEL NODE · 20.12°N, 110.35°E</div>
+      </div>
+      <div class="chart-tools">
+        <div class="tool-group"><span class="tool-label">Zoom</span>
+          <button class="zoom-btn" data-range="1D">1D</button><button class="zoom-btn" data-range="3D">3D</button><button class="zoom-btn" data-range="1W">1W</button><button class="zoom-btn active" data-range="2W">2W</button><button class="zoom-btn" data-range="1M">1M</button><button class="zoom-btn" data-range="ALL">All</button>
+        </div>
+        <div class="tool-group">
+          <button class="metric-btn active" data-metric="wave">Wave Height</button><button class="metric-btn" data-metric="sst">SST</button><button class="metric-btn" data-metric="current">Current</button><button class="metric-btn" data-metric="period">Wave Period</button>
+        </div>
+      </div>
+      <div class="chart-area">
+        <div class="chart-wrap"><canvas id="seriesChart"></canvas></div>
+        <div class="direction-wrap"><div class="direction-label">DIRECTION</div><canvas id="directionCanvas"></canvas></div>
+      </div>
+      <div class="chart-foot"><span>Dashed line = current time. Past values are archived model output; future values are forecast.</span><span id="chartStamp"><strong>LIVE MODEL</strong></span></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="app-core.js"></script>
+<script src="app-ui.js"></script>
+</body>
+</html>
